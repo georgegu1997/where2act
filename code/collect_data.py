@@ -12,12 +12,14 @@ from PIL import Image
 from utils import get_global_position_from_camera, save_h5
 import cv2
 import json
+import pickle
 from argparse import ArgumentParser
 
 from sapien.core import Pose
 from env import Env, ContactError
 from camera import Camera
 from robots.panda_robot import Robot
+
 
 parser = ArgumentParser()
 parser.add_argument('shape_id', type=str)
@@ -70,6 +72,17 @@ joint_angles = env.load_object(object_urdf_fn, object_material, state=state)
 out_info['joint_angles'] = joint_angles
 out_info['joint_angles_lower'] = env.joint_angles_lower
 out_info['joint_angles_upper'] = env.joint_angles_upper
+
+# Get the joint poses in the global frame
+out_info['joints'] = env.joints
+
+# Convert the joint pose from global frame to camera frame
+w2c_mat = np.linalg.inv(cam.get_metadata()['mat44'])
+for i in range(len(out_info['joints'])):
+    pose_global = out_info['joints'][i]['pose_global'].to_transformation_matrix()
+    out_info['joints'][i]['pose_cam'] = (w2c_mat @ pose_global).tolist()
+    out_info['joints'][i]['pose_global'] = pose_global.tolist()
+
 cur_qpos = env.get_object_qpos()
 
 # simulate some steps for the object to stay rest
@@ -101,8 +114,10 @@ if still_timesteps < 5000:
     exit(1)
 
 ### use the GT vision
-rgb, depth = cam.get_observation()
+rgb, depth, seg, obj_seg = cam.get_observation()
 Image.fromarray((rgb*255).astype(np.uint8)).save(os.path.join(out_dir, 'rgb.png'))
+pickle.dump(seg, open(os.path.join(out_dir, 'seg.pkl'), "wb"))
+pickle.dump(obj_seg, open(os.path.join(out_dir, 'obj_seg.pkl'), "wb"))
 
 cam_XYZA_id1, cam_XYZA_id2, cam_XYZA_pts = cam.compute_camera_XYZA(depth)
 cam_XYZA = cam.compute_XYZA_matrix(cam_XYZA_id1, cam_XYZA_id2, cam_XYZA_pts, depth.shape[0], depth.shape[1])
@@ -213,7 +228,7 @@ robot = Robot(env, robot_urdf_fn, robot_material, open_gripper=('pulling' in pri
 # move to the final pose
 robot.robot.set_root_pose(final_pose)
 env.render()
-rgb_final_pose, _ = cam.get_observation()
+rgb_final_pose, _, _, _ = cam.get_observation()
 Image.fromarray((rgb_final_pose*255).astype(np.uint8)).save(os.path.join(out_dir, 'viz_target_pose.png'))
 
 # move back

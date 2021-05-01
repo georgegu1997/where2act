@@ -90,9 +90,23 @@ class Env(object):
 
         # compute link actor information
         self.all_link_ids = [l.get_id() for l in self.object.get_links()]
+        self.joints = []
+
         self.movable_link_ids = []
         for j in self.object.get_joints():
             if j.get_dof() == 1:
+                child_link = j.get_child_link()
+                parent_link = j.get_parent_link()
+                self.joints.append({
+                    "pose_global":j.get_global_pose(),
+                    "joint_type": j.type.name,
+                    "name": j.name,
+                    "parent_link": parent_link.name, 
+                    "child_link": child_link.name, 
+                    "parent_id": parent_link.get_id(), 
+                    "child_id": child_link.get_id(), 
+                })
+                # print(j.get_global_pose())
                 self.movable_link_ids.append(j.get_child_link().get_id())
         if self.flog is not None:
             self.flog.write('All Actor Link IDs: %s\n' % str(self.all_link_ids))

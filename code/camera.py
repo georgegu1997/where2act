@@ -56,7 +56,9 @@ class Camera(object):
         mask = np.tile(rgba[:, :, 3:4], [1, 1, 3])
         rgb = rgba[:, :, :3] * mask + white * (1 - mask)
         depth = self.camera.get_depth().astype(np.float32)
-        return rgb, depth
+        seg = self.camera.get_segmentation()
+        obj_seg = self.camera.get_obj_segmentation()
+        return rgb, depth, seg, obj_seg
 
     def compute_camera_XYZA(self, depth):
         camera_matrix = self.camera.get_camera_matrix()[:3, :3]
