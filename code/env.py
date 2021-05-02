@@ -101,8 +101,8 @@ class Env(object):
                     "pose_global":j.get_global_pose(),
                     "joint_type": j.type.name,
                     "name": j.name,
-                    "parent_link": parent_link.name, 
-                    "child_link": child_link.name, 
+                    "parent_name": parent_link.name, 
+                    "child_name": child_link.name, 
                     "parent_id": parent_link.get_id(), 
                     "child_id": child_link.get_id(), 
                 })

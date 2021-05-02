@@ -77,9 +77,13 @@ out_info['joint_angles_upper'] = env.joint_angles_upper
 out_info['joints'] = env.joints
 
 # Convert the joint pose from global frame to camera frame
+# w2c_mat = np.linalg.inv(cam.get_metadata()['mat44'])
 w2c_mat = np.linalg.inv(cam.get_metadata()['mat44'])
+# permutation = np.array([[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]])
+
 for i in range(len(out_info['joints'])):
     pose_global = out_info['joints'][i]['pose_global'].to_transformation_matrix()
+    # pose_global = permutation @ pose_global
     out_info['joints'][i]['pose_cam'] = (w2c_mat @ pose_global).tolist()
     out_info['joints'][i]['pose_global'] = pose_global.tolist()
 
