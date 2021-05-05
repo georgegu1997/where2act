@@ -116,7 +116,7 @@ if still_timesteps < 5000:
     exit(1)
 
 ### use the GT vision
-rgb, depth = cam.get_observation()
+rgb, depth, seg, obj_seg = cam.get_observation()
 object_link_ids = env.movable_link_ids
 gt_movable_link_mask = cam.get_movable_link_mask(object_link_ids)
 
@@ -196,7 +196,7 @@ def plot_figure(up, forward):
     pose = Pose().from_transformation_matrix(rotmat)
     robot.robot.set_root_pose(pose)
     env.render()
-    rgb_final_pose, _ = cam.get_observation()
+    rgb_final_pose, _, _, _ = cam.get_observation()
     fimg = Image.fromarray((rgb_final_pose*255).astype(np.uint8))
     fimg.save(os.path.join(result_dir, 'action.png'))
 
