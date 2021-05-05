@@ -5,6 +5,8 @@
 """
 
 import os
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES'] = "1"
 import sys
 import shutil
 import numpy as np
@@ -41,7 +43,7 @@ else:
     out_dir = os.path.join('results', '%s_%s_%d_%s_%d' % (shape_id, args.category, args.cnt_id, primact_type, trial_id))
 if os.path.exists(out_dir):
     shutil.rmtree(out_dir)
-os.mkdir(out_dir)
+os.makedirs(out_dir)
 flog = open(os.path.join(out_dir, 'log.txt'), 'w')
 out_info = dict()
 
