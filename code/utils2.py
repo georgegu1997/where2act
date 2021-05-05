@@ -32,7 +32,7 @@ class ModelWrapper():
         model_def = utils.get_model_module(model_version)
 
         # create models
-        network = model_def.Network(train_conf.feat_dim)
+        network = model_def.Network(train_conf.feat_dim, train_conf.rv_dim, train_conf.rv_cnt)
 
         # load pretrained model
         print('Loading ckpt from ', os.path.join('logs', exp_name, 'ckpts'), model_epoch)
@@ -102,29 +102,63 @@ class ModelWrapper():
         # push through unet
         feats = self.network.pointnet2(pc.repeat(1, 1, 2))[0].permute(1, 0)    # N x F
 
-        # sample a random direction to query
-        gripper_direction_camera = torch.randn(1, 3).to(self.device)
-        gripper_direction_camera = F.normalize(gripper_direction_camera, dim=1)
-        gripper_forward_direction_camera = torch.randn(1, 3).to(self.device)
-        gripper_forward_direction_camera = F.normalize(gripper_forward_direction_camera, dim=1)
+        with torch.no_grad():
+            # push through the network
+            pred_6d = self.network.inference_actor(pc)[0]  # RV_CNT x 6
+            pred_Rs = self.network.actor.bgs(pred_6d.reshape(-1, 3, 2))    # RV_CNT x 3 x 3
+            pred_action_score_map = self.network.inference_action_score(pc)[0] # N
+            pred_action_score_map = pred_action_score_map.cpu().numpy()
 
-        up = gripper_direction_camera
-        forward = gripper_forward_direction_camera
-        left = torch.cross(up, forward)
-        forward = torch.cross(left, up)
-        forward = F.normalize(forward, dim=1)
+        result_scores = []
+        for i in range(self.train_conf.rv_cnt):
+            gripper_direction_camera = pred_Rs[i:i+1, :, 0]
+            gripper_forward_direction_camera = pred_Rs[i:i+1, :, 1]
+            
+            result_score = self.network.inference_critic(pc, gripper_direction_camera, gripper_forward_direction_camera, abs_val=True).item()
+            result_scores.append(result_score)
+            result = (result_score > 0.5)
+        result_scores = np.asarray(result_scores)
 
-        dirs1 = up.repeat(self.train_conf.num_point_per_shape, 1)
-        dirs2 = forward.repeat(self.train_conf.num_point_per_shape, 1)
+        # gripper_direction_camera = pred_Rs[:, :, 0]
+        # gripper_forward_direction_camera = pred_Rs[:, :, 1]
+        
+        # result_score = self.network.inference_critic(pc, gripper_direction_camera, gripper_forward_direction_camera, abs_val=True).item()
+        # result = (result_score > 0.5)
 
-        input_queries = torch.cat([dirs1, dirs2], dim=1)
-        net = self.network.critic(feats, input_queries)
-        result = torch.sigmoid(net).detach().cpu().numpy()
-        result *= pc_movable
+        out = {
+            "pred_Rs": pred_Rs,
+            "result_score": result_scores,
+            "gripper_direction_camera":  pred_Rs[:, :, 0],
+            "gripper_forward_direction_camera":  pred_Rs[:, :, 1],
+            "pred_action_score_map": pred_action_score_map,
+            "pc": pc,
+        }
 
-        point_cloud = pc.cpu().numpy()[0]
+        return out
 
-        return point_cloud, result
+        # # sample a random direction to query
+        # gripper_direction_camera = torch.randn(1, 3).to(self.device)
+        # gripper_direction_camera = F.normalize(gripper_direction_camera, dim=1)
+        # gripper_forward_direction_camera = torch.randn(1, 3).to(self.device)
+        # gripper_forward_direction_camera = F.normalize(gripper_forward_direction_camera, dim=1)
+
+        # up = gripper_direction_camera
+        # forward = gripper_forward_direction_camera
+        # left = torch.cross(up, forward)
+        # forward = torch.cross(left, up)
+        # forward = F.normalize(forward, dim=1)
+
+        # dirs1 = up.repeat(self.train_conf.num_point_per_shape, 1)
+        # dirs2 = forward.repeat(self.train_conf.num_point_per_shape, 1)
+
+        # input_queries = torch.cat([dirs1, dirs2], dim=1)
+        # net = self.network.critic(feats, input_queries)
+        # result = torch.sigmoid(net).detach().cpu().numpy()
+        # result *= pc_movable
+
+        # point_cloud = pc.cpu().numpy()[0]
+
+        # return point_cloud, result
 
 def loadData(folder_path):
     if folder_path[-1] == "/":
