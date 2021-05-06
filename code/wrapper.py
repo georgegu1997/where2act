@@ -18,15 +18,12 @@ from utils import get_global_position_from_camera
 from pointnet2_ops.pointnet2_utils import furthest_point_sample
 
 class ModelWrapper():
-    def __init__(self, exp_name, model_epoch, model_version):
-        '''
-        
-        '''
+    def __init__(self, exp_name, model_epoch, model_version, log_folder = "/home/qiaog/src/where2act/code/logs"):
         # set up device
         device = torch.device('cuda:0')
 
         # load train config
-        train_conf = torch.load(os.path.join('logs', exp_name, 'conf.pth'))
+        train_conf = torch.load(os.path.join(log_folder, exp_name, 'conf.pth'))
 
         # load model
         model_def = utils.get_model_module(model_version)
@@ -35,8 +32,8 @@ class ModelWrapper():
         network = model_def.Network(train_conf.feat_dim, train_conf.rv_dim, train_conf.rv_cnt)
 
         # load pretrained model
-        print('Loading ckpt from ', os.path.join('logs', exp_name, 'ckpts'), model_epoch)
-        data_to_restore = torch.load(os.path.join('logs', exp_name, 'ckpts', '%d-network.pth' % model_epoch))
+        print('Loading ckpt from ', os.path.join(log_folder, exp_name, 'ckpts'), model_epoch)
+        data_to_restore = torch.load(os.path.join(log_folder, exp_name, 'ckpts', '%d-network.pth' % model_epoch))
         network.load_state_dict(data_to_restore, strict=False)
         print('DONE\n')
 
@@ -127,7 +124,8 @@ class ModelWrapper():
         out = {
             "x": pc[0, 0, 0].item(), 
             "y": pc[0, 0, 1].item(), 
-            "result_score": result_scores[best_proposal_idx],
+            "action_score": result_scores[best_proposal_idx],
+            "actionability_score": pred_ab_score[pred_ab_idx],
             "gripper_direction_camera":  pred_Rs[best_proposal_idx, :, 0].cpu().numpy(),
             "gripper_forward_direction_camera":  pred_Rs[best_proposal_idx, :, 1].cpu().numpy(),
         }
