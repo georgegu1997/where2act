@@ -113,8 +113,8 @@ class ModelWrapper():
             pred_6d = self.network.inference_actor(pc)[0]  # RV_CNT x 6
             pred_Rs = self.network.actor.bgs(pred_6d.reshape(-1, 3, 2))    # RV_CNT x 3 x 3
 
-            gripper_direction_camera = pred_Rs[0:1, :, 0]
-            gripper_forward_direction_camera = pred_Rs[0:1, :, 1]
+            gripper_direction_camera = pred_Rs[:, :, 0]
+            gripper_forward_direction_camera = pred_Rs[:, :, 1]
             
             result_scores = self.network.inference_critic(pc, gripper_direction_camera, gripper_forward_direction_camera, abs_val=True)
             result_scores = result_scores.detach().cpu().numpy()
