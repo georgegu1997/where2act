@@ -115,7 +115,7 @@ if still_timesteps < 5000:
 
 
 ### use the GT vision
-rgb, depth = cam.get_observation()
+rgb, depth, _, _ = cam.get_observation()
 object_link_ids = env.movable_link_ids
 gt_movable_link_mask = cam.get_movable_link_mask(object_link_ids)
 gt_handle_mask = cam.get_handle_mask()
@@ -218,7 +218,7 @@ with torch.no_grad():
         pose = Pose().from_transformation_matrix(rotmat)
         robot.robot.set_root_pose(pose)
         env.render()
-        rgb_final_pose, _ = cam.get_observation()
+        rgb_final_pose, _, _, _ = cam.get_observation()
         fimg = (rgb_final_pose*255).astype(np.uint8)
         fimg = Image.fromarray(fimg)
         

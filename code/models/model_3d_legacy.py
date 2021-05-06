@@ -289,6 +289,9 @@ class Network(nn.Module):
         pcs = pcs.repeat(1, 1, 2)
         whole_feats = self.pointnet2(pcs)
         net = whole_feats[:, :, 0]
+        
+        # Make the batch size equal to the input action proposal
+        net = net.expand(len(dirs1), -1)
 
         input_queries = torch.cat([dirs1, dirs2], dim=1)
         pred_result_logits = self.critic(net, input_queries)
